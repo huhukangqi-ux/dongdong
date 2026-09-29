@@ -142,48 +142,44 @@
       </section>
 
       <section class="screen community" data-screen="community" aria-labelledby="community-title" hidden>
-        <header class="page-head community-head"><div><p class="eyebrow">今日地球防卫计划</p><h1 id="community-title" class="sr-only">社区</h1></div><button class="icon-button" data-action="toggle-community-event" aria-label="切换模拟事件">↻</button></header>
-        <div class="defense-progress"><div class="progress-track"><i style="width:62%"></i></div><div><span>12,680 人参与</span><span>已送回 7,861 只</span></div></div>
+        <header class="page-head community-head"><div><p class="eyebrow">今日地球防卫计划</p><h1 id="community-title" class="sr-only">社区</h1></div></header>
+        <div class="defense-progress"><div class="progress-track"><i id="defense-bar" style="width:0%"></i></div><div><span id="defense-participants">读取今日进度…</span><span id="defense-rescued"></span></div></div>
         <div class="tabs" role="tablist"><button class="active" data-community-tab="friends" role="tab">好友</button><button data-community-tab="square" role="tab">广场</button></div>
         <div class="community-panel" id="friends-panel">
-          <div class="section-title"><h2>好友</h2><span>点击头像看进度</span></div>
-          <div class="friend-grid">
-            <article class="friend-bubble"><button class="friend-avatar" data-friend="小鱼" aria-label="查看小鱼的计划"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="25" r="14"/><path d="M14 58c2-13 10-20 18-20s16 7 18 20"/><path class="hair" d="M19 23c2-12 22-15 27-2-7-1-13-4-18-8-2 5-5 8-9 10z"/></svg></button><strong>小鱼</strong><div class="friend-actions"><button data-action="praise" aria-label="夸夸小鱼">♡</button><button data-action="nudge" aria-label="锤锤小鱼">🔨</button></div></article>
-            <article class="friend-bubble"><button class="friend-avatar" data-friend="阿圆" aria-label="查看阿圆的计划"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="25" r="14"/><path d="M14 58c2-13 10-20 18-20s16 7 18 20"/><path class="hair" d="M18 25c0-18 28-19 28 0-6-7-22-7-28 0z"/></svg></button><strong>阿圆</strong><div class="friend-actions"><button data-action="praise" aria-label="夸夸阿圆">♡</button><button data-action="nudge" aria-label="锤锤阿圆">🔨</button></div></article>
-            <article class="friend-bubble"><button class="friend-avatar" data-friend="毛毛" aria-label="查看毛毛的计划"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="25" r="14"/><path d="M14 58c2-13 10-20 18-20s16 7 18 20"/><path class="hair" d="M18 22l6-9 6 6 7-8 9 12c-8-5-20-5-28-1z"/></svg></button><strong>毛毛</strong><div class="friend-actions"><button data-action="praise" aria-label="夸夸毛毛">♡</button><button data-action="nudge" aria-label="锤锤毛毛">🔨</button></div></article>
-          </div>
-          <div class="section-title memo-title"><h2>留言板</h2><div class="memo-tools"><span id="memo-count">2 条留言</span><button class="memo-add" data-action="new-message">＋ 新建</button></div></div>
+          <div class="section-title"><h2>好友</h2><span id="friend-count">读取中</span></div>
+          <div class="friend-grid" id="friend-grid"></div>
+          <div class="section-title memo-title"><h2>留言板</h2><div class="memo-tools"><span id="memo-count">0 条留言</span><button class="memo-add" data-action="new-message">＋ 新建</button></div></div>
           <div class="memo-board" id="memo-board"></div>
         </div>
         <div class="community-panel" id="square-panel" hidden>
-          <div class="section-title"><h2>运动挑战</h2><span>正在进行 3 个</span></div>
-          <div class="challenge-list">
-            <button class="challenge-list-item" data-action="view-challenge"><span class="challenge-number">7<small>DAYS</small></span><span class="challenge-copy"><small>土豆队长 · 328人参加</small><strong>7天拒绝沙发土豆</strong><em>每天 5 分钟 · 今日完成 71%</em></span><span class="challenge-reactions">♡ 86　🔨 12</span></button>
-            <button class="challenge-list-item" data-action="view-challenge"><span class="challenge-number">5<small>DAYS</small></span><span class="challenge-copy"><small>小鱼 · 126人参加</small><strong>午休肩颈松一松</strong><em>每天 3 分钟 · 今日完成 83%</em></span><span class="challenge-reactions">♡ 42　🔨 6</span></button>
-            <button class="challenge-list-item" data-action="view-challenge"><span class="challenge-number">14<small>DAYS</small></span><span class="challenge-copy"><small>毛毛 · 89人参加</small><strong>睡前不做僵硬人</strong><em>每天 5 分钟 · 今日完成 64%</em></span><span class="challenge-reactions">♡ 31　🔨 9</span></button>
-          </div>
-          <button class="launch-challenge" data-action="toast" data-message="挑战发起功能将在下一版本开放"><span>＋</span><b>发起挑战</b></button>
+          <div class="section-title"><h2>运动挑战</h2><span id="challenge-count">读取中</span></div>
+          <div class="challenge-list" id="challenge-list"></div>
         </div>
         <nav class="bottom-nav" aria-label="主要导航"><button data-nav="home"><span class="nav-icon">⌂</span><span>今日</span></button><button class="active" data-nav="community"><span class="nav-icon">♧</span><span>社区</span></button><button data-nav="profile"><span class="nav-icon">♙</span><span>我的</span></button></nav>
       </section>
 
       <section class="screen challenge" data-screen="challenge" aria-labelledby="challenge-title" hidden>
         <header class="topbar"><button class="back-button" data-action="back-community" aria-label="返回">‹</button><span>挑战详情</span><button class="icon-button" data-action="share" aria-label="分享挑战">↗</button></header>
-        <div class="challenge-hero"><p class="eyebrow">9月23日—9月29日</p><h1 id="challenge-title">7天拒绝<br>沙发土豆</h1><p>每天抽出 5 分钟，和 328 位地球居民一起给飞船充能。</p><div class="participant-stack"><span>土</span><span>鱼</span><span>圆</span><span>毛</span><b>+324</b></div></div>
-        <div class="challenge-facts"><div><b>5分钟</b><span>每日任务</span></div><div><b>71%</b><span>今日完成</span></div><div><b>广场</b><span>默认可见</span></div></div>
-        <section class="punishment-note"><span>自选惩罚建议</span><strong>被外星人打屁屁</strong><p>只有你主动选择并再次授权后，惩罚动画才会公开。</p></section>
-        <section><div class="section-title"><h2>今日排行榜</h2><span>按完成时间</span></div><ol class="ranking"><li><span>1</span>小鱼 <b>12:08 完成</b></li><li><span>2</span>土豆队长 <b>12:31 完成</b></li><li><span>3</span>阿圆 <b>运动中</b></li></ol></section>
+        <div class="challenge-hero"><p class="eyebrow" id="challenge-dates">读取挑战…</p><h1 id="challenge-title">挑战</h1><p id="challenge-desc"></p><div class="participant-stack" id="challenge-people"></div></div>
+        <div class="challenge-facts"><div><b id="challenge-minutes">—</b><span>每日任务</span></div><div><b id="challenge-rate">—</b><span>今日完成</span></div><div><b id="challenge-visibility">—</b><span id="challenge-visibility-label">可见范围</span></div></div>
+        <section class="punishment-note"><span>失败惩罚</span><strong id="challenge-punishment">加入后选择</strong><p id="challenge-punishment-note">只有你主动选择并再次授权后，惩罚才会公开。</p></section>
+        <section><div class="section-title"><h2>今日排行榜</h2><span>按完成时间</span></div><ol class="ranking" id="challenge-ranking"></ol></section>
         <div class="sticky-action"><button class="button button--primary" id="join-challenge-button" data-action="join-challenge">加入挑战</button></div>
       </section>
 
       <section class="screen profile" data-screen="profile" aria-labelledby="profile-title" hidden>
-        <header class="profile-head"><div class="avatar avatar--large">K</div><div><p class="eyebrow">地球守卫者 Lv.4</p><h1 id="profile-title">Kelsey</h1><small>12 位好友 · 1 个进行中挑战</small></div><button class="icon-button" data-action="settings" aria-label="设置">⚙</button></header>
-        <div class="profile-stats"><div><b>12</b><span>累计天数</span></div><div><b>86</b><span>运动分钟</span></div><div><b>72%</b><span>本周完成</span></div></div>
-        <section><div class="section-title"><h2>外星人救援图鉴</h2><button data-action="toast" data-message="已展示全部救援记录">查看全部</button></div><div class="collection"><button data-action="toast" data-message="弹弹：谢谢你把我送回软糖星！"><span class="alien-sprite alien--pink"></span><small>弹弹 · 3次</small></button><button data-action="toast" data-message="冲冲：下次继续并肩作战！"><span class="alien-sprite alien--blue"></span><small>冲冲 · 2次</small></button><button data-action="toast" data-message="慢慢还在等待今天的动能"><span class="alien-sprite alien--green faded"></span><small>慢慢 · 传送中</small></button></div></section>
-        <section><div class="section-title"><h2>成就徽章</h2><span>5 枚</span></div><div class="badges"><span>✦<small>第一次动起来</small></span><span>3<small>连续救援3天</small></span><span>🌍<small>地球守卫者</small></span></div></section>
-        <div class="settings-list"><button data-action="settings">提醒设置 <span>›</span></button><button data-action="settings">运动偏好 <span>›</span></button><button data-action="settings">身体限制与健康信息 <span>›</span></button><button data-action="settings">隐私设置 <span>›</span></button></div>
+        <header class="profile-head"><div class="avatar avatar--large" id="profile-avatar">…</div><div><p class="eyebrow" id="profile-level">读取中</p><h1 id="profile-title">我的</h1><small id="profile-meta">正在读取账号</small></div><button class="icon-button" data-setting="reminder" aria-label="提醒设置">⚙</button></header>
+        <div class="profile-stats"><div><b id="profile-days">—</b><span>累计天数</span></div><div><b id="profile-minutes">—</b><span>运动分钟</span></div><div><b id="profile-week">—</b><span>本周完成</span></div></div>
+        <section><div class="section-title"><h2>外星人救援图鉴</h2><span id="profile-collection-count">读取中</span></div><div class="collection" id="profile-collection"></div></section>
+        <section><div class="section-title"><h2>成就徽章</h2><span id="profile-badge-count">读取中</span></div><div class="badges" id="profile-badges"></div></section>
+        <div class="settings-list"><button data-setting="reminder">提醒设置 <span>›</span></button><button data-setting="preference">运动偏好 <span>›</span></button><button data-setting="health">身体限制与健康信息 <span>›</span></button><button data-setting="privacy">隐私设置 <span>›</span></button></div>
         <nav class="bottom-nav" aria-label="主要导航"><button data-nav="home"><span class="nav-icon">⌂</span><span>今日</span></button><button data-nav="community"><span class="nav-icon">♧</span><span>社区</span></button><button class="active" data-nav="profile"><span class="nav-icon">♙</span><span>我的</span></button></nav>
       </section>
+
+      <div class="quick-fab" id="quick-fab" hidden>
+        <button class="quick-fab-main" id="quick-fab-main" data-action="quick-fab-start" aria-label="快速开启一分钟运动"><span class="quick-fab-glyph" id="quick-fab-glyph" aria-hidden="true">✦</span><b>1分钟</b></button>
+        <button class="quick-fab-edit" data-action="quick-settings" aria-label="设置快速开启的动作">⋯</button>
+      </div>
 
       <div class="overlay" id="sheet-overlay" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet-handle"></div><header><h2 id="sheet-title">调整计划</h2><button data-action="close-sheet" aria-label="关闭">×</button></header><div id="sheet-content"></div></div></div>
       <div class="overlay overlay--center" id="dialog-overlay" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button class="dialog-close" data-action="close-dialog" aria-label="关闭">×</button><div id="dialog-content"></div></div></div>
@@ -191,6 +187,7 @@
     </div>
     <aside class="prototype-note"><strong>动动 · 产品 Demo</strong><span>五条核心路径均可操作</span><small>重置 Demo：按键盘 R</small></aside>
   </main>
+  <script src="./api.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
