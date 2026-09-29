@@ -20,20 +20,33 @@
   function deviceKey() {
     let key = localStorage.getItem(DEVICE_KEY);
     if (!key) {
-      key = crypto.randomUUID();
+      key = crypto.randomUUID?.() || `web-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
       try { localStorage.setItem(DEVICE_KEY, key); } catch (_) {}
     }
     return key;
   }
 
-  async function request(url, { method = 'GET', body, token } = {}) {
+  async function request(url, { method = 'GET', body, token, timeoutMs = 20000 } = {}) {
     const headers = { apikey: PUBLISHABLE_KEY };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) throw new ApiError(response.status, data);
-    return data;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new ApiError(response.status, data);
+      return data;
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        const timeout = new Error('请求超时');
+        timeout.name = 'TimeoutError';
+        throw timeout;
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timer);
+    }
   }
 
   async function createGuestSession() {

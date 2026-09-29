@@ -303,15 +303,23 @@ function onboardingPayload() {
 
 function applyServerProfile(me) {
   if (!me?.onboarding_completed) return false;
-  const focuses = me.preferences.focus_labels?.length ? me.preferences.focus_labels : [me.preferences.focus_label];
-  const goals = me.health.primary_goal_labels?.length ? me.health.primary_goal_labels : [me.health.primary_goal_label];
+  const focuses = me.preferences?.focus_labels?.length ? me.preferences.focus_labels : [me.preferences?.focus_label].filter(Boolean);
+  const goals = me.health?.primary_goal_labels?.length ? me.health.primary_goal_labels : [me.health?.primary_goal_label].filter(Boolean);
   state.config = normalizeConfig({
     ...state.config,
-    scene: me.preferences.scene_label, duration: me.preferences.duration_min, focuses, focus: focuses[0],
-    frequency: me.plan.frequency_per_week, days: me.plan.weekday_labels,
-    reminder: me.plan.reminder || '19:00', reminderEnabled: Boolean(me.plan.reminder),
-    age: me.health.age_band_label, foundation: me.health.fitness_level_label, goals, goal: goals[0],
-    limits: me.body_limits.map(item => item.label)
+    scene: me.preferences?.scene_label || state.config.scene,
+    duration: me.preferences?.duration_min || state.config.duration,
+    focuses: focuses.length ? focuses : state.config.focuses,
+    focus: (focuses.length ? focuses : state.config.focuses)[0],
+    frequency: me.plan?.frequency_per_week || state.config.frequency,
+    days: me.plan?.weekday_labels?.length ? me.plan.weekday_labels : state.config.days,
+    reminder: me.plan?.reminder || state.config.reminder || '19:00',
+    reminderEnabled: me.plan ? Boolean(me.plan.reminder) : state.config.reminderEnabled,
+    age: me.health?.age_band_label || state.config.age,
+    foundation: me.health?.fitness_level_label || state.config.foundation,
+    goals: goals.length ? goals : state.config.goals,
+    goal: (goals.length ? goals : state.config.goals)[0],
+    limits: me.body_limits?.length ? me.body_limits.map(item => item.label) : state.config.limits
   });
   if (alienData[me.alien?.name]) state.alien = me.alien.name;
   state.planReady = true;
@@ -327,12 +335,23 @@ async function submitOnboarding() {
   const label = button.textContent;
   button.disabled = true;
   button.textContent = '正在保存计划…';
+  const status = $('#save-status');
+  if (status) status.hidden = true;
   try {
-    applyServerProfile(await window.dongdongApi.submitOnboarding(onboardingPayload()));
+    const me = await window.dongdongApi.submitOnboarding(onboardingPayload());
+    try { applyServerProfile(me); } catch (_) {}
+    if (!state.planReady && me?.onboarding_completed) { state.planReady = true; saveState(); }
     showScreen('home');
     toast(`周计划已保存，今天从 ${state.config.duration} 分钟开始`);
   } catch (error) {
-    toast(error.status === 400 ? '计划信息有误，请返回检查后再试' : '网络开小差了，计划还没保存，请再试一次');
+    const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError';
+    const message = timedOut
+      ? '保存超过 20 秒还没有回应。请再点一次；如果还是停住，这台设备暂时连不上服务器。'
+      : error.status === 400
+        ? '有一项选择没有通过，请返回检查每周天数和身体限制后再试。'
+        : '没能连上服务器，计划还没保存。请再试一次。';
+    if (status) { status.hidden = false; status.textContent = message; }
+    toast(message);
   } finally {
     onboardingSubmitting = false;
     button.disabled = false;
