@@ -376,6 +376,10 @@ const ACTION_GLYPH = { stretch: '⌒', mobility: '↻', activation: '✦', low_i
 let actionCatalog = null;
 let planMatchKey = '';
 
+function actionGif(code) {
+  return /^A\d{3}$/.test(code || '') ? `./assets/actions/${code}.gif` : '';
+}
+
 function toPlanAction(row) {
   return {
     code: row.code,
@@ -386,6 +390,7 @@ function toPlanAction(row) {
     tip: row.screen_cue || '动作慢一点，保持能正常说话。',
     steps: row.steps || '',
     source: row.source,
+    gif: actionGif(row.code),
     favorite: false
   };
 }
@@ -407,19 +412,11 @@ function matchPlanActions(rows, config) {
   let pool = rows.filter((row) => fits(row, false, false));
   if (pool.length < config.duration) pool = rows.filter((row) => fits(row, false, true));
   if (pool.length < Math.min(3, config.duration)) pool = rows.filter((row) => fits(row, true, true));
-  const groups = new Map();
-  pool.forEach((row) => {
-    const key = row.source || 'dongdong';
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(row);
-  });
-  const buckets = [...groups.values()];
   const count = Math.max(1, config.duration);
-  const picked = [];
-  for (let index = 0; picked.length < count && buckets.some((bucket) => bucket.length); index += 1) {
-    const bucket = buckets[index % buckets.length];
-    if (bucket.length) picked.push(bucket.shift());
-  }
+  const withGif = pool.filter((row) => actionGif(row.code));
+  const withoutGif = pool.filter((row) => !actionGif(row.code));
+  const picked = withGif.slice(0, count);
+  if (picked.length < count) picked.push(...withoutGif.slice(0, count - picked.length));
   return picked.map(toPlanAction);
 }
 
@@ -593,10 +590,16 @@ function saveQuickSettings() {
   saveState(); renderQuickFab(); closeSheet();
 }
 
+function beginWorkoutSession() {
+  state.completedActionKeys = new Set();
+  state.completedPartsBeforeSession = state.completedParts || 0;
+}
+
 function startWorkout(quick = false, alien) {
   state.mode = quick ? 'quick' : 'formal';
   state.sessionAlien = alien || (quick ? state.quick.alien : state.alien);
   state.workoutActions = quick ? [{ ...getQuickAction() }] : state.actions.map(item => ({...item}));
+  beginWorkoutSession();
   state.workoutIndex = 0; state.seconds = 60; state.paused = false; state.following = true;
   renderWorkout(); showScreen('workout'); startTimer();
 }
@@ -605,6 +608,7 @@ function openWorkoutAt(index) {
   state.mode = 'formal';
   state.sessionAlien = state.alien;
   state.workoutActions = state.actions.map(item => ({ ...item }));
+  beginWorkoutSession();
   state.workoutIndex = index;
   state.seconds = 60;
   state.paused = true;
@@ -614,6 +618,16 @@ function openWorkoutAt(index) {
   showScreen('workout');
 }
 
+function completedCount() {
+  return state.completedActionKeys?.size || 0;
+}
+
+function currentActionKey() {
+  const action = state.workoutActions[state.workoutIndex];
+  if (!action) return '';
+  return action.code || `${state.workoutIndex}:${action.name}`;
+}
+
 function beginFollow() {
   state.following = true;
   state.paused = false;
@@ -621,17 +635,41 @@ function beginFollow() {
   startTimer();
 }
 
+function renderMotionDemo(action) {
+  const demo = $('#motion-demo');
+  demo.setAttribute('aria-label', action.gif ? `${action.name}的动作示意` : `${action.name}暂无动作示意`);
+  demo.classList.toggle('has-gif', Boolean(action.gif));
+  demo.classList.toggle('is-empty', !action.gif);
+  let image = demo.querySelector('img');
+  if (!action.gif) {
+    if (image) image.remove();
+    return;
+  }
+  if (!image) {
+    image = document.createElement('img');
+    image.alt = '';
+    demo.appendChild(image);
+  }
+  if (image.getAttribute('src') !== action.gif) image.src = action.gif;
+  image.onerror = () => {
+    image.remove();
+    demo.classList.remove('has-gif');
+    demo.classList.add('is-empty');
+  };
+}
+
 function renderWorkout() {
   const action = state.workoutActions[state.workoutIndex];
   const total = state.workoutActions.length;
+  const done = completedCount();
   $('#workout-index').textContent = `${state.workoutIndex + 1}/${total}`;
-  $('#workout-energy-label').textContent = `已产生动能 ${state.workoutIndex}分钟`;
-  $('#workout-progress').style.width = `${(state.workoutIndex / total) * 100}%`;
+  $('#workout-energy-label').textContent = `已产生动能 ${done}分钟`;
+  $('#workout-progress').style.width = `${(done / total) * 100}%`;
   $('#workout-part').textContent = `${action.part} · 轻松`;
   $('#workout-action').textContent = action.name;
   $('#workout-tip').textContent = action.tip;
   $('#guide-detail').textContent = action.steps || '保持呼吸自然，动作幅度以舒适为准。如果出现刺痛或眩晕，请立刻停止。';
-  $('#motion-demo').setAttribute('aria-label', `${action.name}的动作示意`);
+  renderMotionDemo(action);
   $('#timer').textContent = formatTime(state.seconds);
   $('#next-action-label').textContent = state.workoutIndex + 1 < total ? `下一个：${state.workoutActions[state.workoutIndex + 1].name}` : '完成这个动作，飞船就能出发';
   const pauseButton = $('.pause-button');
@@ -658,13 +696,30 @@ function startTimer() {
     if (state.screen !== 'workout' || state.paused) return;
     state.seconds = Math.max(0, state.seconds - 1);
     $('#timer').textContent = formatTime(state.seconds);
-    if (state.seconds === 0) nextAction();
+    if (state.seconds === 0) completeCurrentAction();
   }, 1000);
 }
 function stopTimer(){ if (workoutTimer) window.clearInterval(workoutTimer); workoutTimer = null; }
 
+function completeCurrentAction() {
+  const key = currentActionKey();
+  if (key) state.completedActionKeys.add(key);
+  const allDone = completedCount() >= state.workoutActions.length;
+  if (allDone || state.workoutIndex + 1 >= state.workoutActions.length) {
+    finishWorkout(state.mode !== 'quick' && allDone);
+    return;
+  }
+  state.workoutIndex += 1;
+  state.seconds = 60;
+  state.paused = !state.following;
+  renderWorkout();
+}
+
 function nextAction() {
-  if (state.workoutIndex + 1 >= state.workoutActions.length) { finishWorkout(state.mode !== 'quick'); return; }
+  if (state.workoutIndex + 1 >= state.workoutActions.length) {
+    toast('做满这 60 秒，才能传送这个部位');
+    return;
+  }
   state.workoutIndex += 1; state.seconds = 60; state.paused = !state.following; renderWorkout();
 }
 function previousAction(){ if (state.workoutIndex > 0) { state.workoutIndex -= 1; state.seconds = 60; renderWorkout(); } else toast('已经是第一个动作'); }
@@ -673,17 +728,35 @@ function finishWorkout(full) {
   stopTimer();
   const quick = state.mode === 'quick';
   const alien = state.sessionAlien || state.alien;
-  const parts = quick ? 1 : full ? 5 : Math.max(1, state.workoutIndex);
-  if (!quick || !state.planReady) { state.completed = full; state.completedParts = parts; }
-  const minutes = quick ? 1 : full ? state.config.duration : parts;
-  $('#complete-kicker').textContent = quick ? '快速一分钟已完成' : full ? '完整计划已完成' : '今天已经产生动能';
-  $('#complete-title').innerHTML = quick ? `第一个部位已传送！<br>${alien}离家又近了一点。` : full ? `救援成功！<br>${alien}已经完整回家。` : `今天先送回了${parts}个部位。`;
-  $('#complete-desc').textContent = quick ? (state.planReady ? '快速一分钟单独记录，不影响今天的正式救援计划。' : '完成一分钟也很了不起。想完整送 TA 回家，可以设置正式计划。') : full ? `你今天的 ${minutes} 分钟，让地球和${alienData[alien].planet}都亮了一点。` : `再动${Math.max(1, state.config.duration - minutes)}分钟，就能把${alien}完整送回家。`;
+  const parts = completedCount();
+  if (parts <= 0) {
+    closeDialog();
+    showScreen(state.planReady ? 'home' : 'welcome');
+    toast('还没做完一个动作，部位先留在原地');
+    return;
+  }
+  if (!quick) {
+    state.completedParts = Math.min(state.workoutActions.length, (state.completedPartsBeforeSession || 0) + parts);
+    state.completed = Boolean(full) || state.completedParts >= state.workoutActions.length;
+  } else if (!state.planReady) {
+    state.completed = false;
+    state.completedParts = 1;
+  }
+  const rescuedHome = !quick && state.completed;
+  const minutes = parts;
+  $('#complete-kicker').textContent = quick ? '快速一分钟已完成' : rescuedHome ? '完整计划已完成' : '今天已经产生动能';
+  $('#complete-title').innerHTML = quick ? `第一个部位已传送！<br>${alien}离家又近了一点。` : rescuedHome ? `救援成功！<br>${alien}已经完整回家。` : `今天先送回了${parts}个部位。`;
+  const remain = Math.max(0, state.workoutActions.length - state.completedParts);
+  $('#complete-desc').textContent = quick ? (state.planReady ? '快速一分钟单独记录，不影响今天的正式救援计划。' : '完成一分钟也很了不起。想完整送 TA 回家，可以设置正式计划。') : rescuedHome ? `你今天的 ${state.completedParts} 分钟，让地球和${alienData[alien].planet}都亮了一点。` : `再动${Math.max(1, remain)}分钟，就能把${alien}完整送回家。`;
   $('.celebrate-zone .planet').textContent = alienData[alien].planet;
   $('#complete-minutes').textContent = minutes;
   $('#complete-actions').textContent = quick ? 1 : full ? state.workoutActions.length : parts;
   $('#complete-energy').textContent = `+${minutes}`;
   $('#quick-plan-cta').hidden = !quick || state.planReady;
+  state.rescueCard = {
+    alien, planet: alienData[alien].planet, minutes, parts, full: rescuedHome, quick,
+    totalParts: quick ? 1 : state.completedParts
+  };
   window.dongdongApi?.communityAct?.({
     op: 'complete',
     active_sec: minutes * 60,
@@ -695,15 +768,133 @@ function finishWorkout(full) {
 
 function exitWorkout() {
   state.paused = true;
-  const completeMinutes = state.workoutIndex;
-  if (completeMinutes > 0) {
-    openDialog(`<h2 id="dialog-title">现在结束吗？</h2><p>已产生 ${completeMinutes} 分钟动能，现在退出可以先传送 ${completeMinutes} 个部位。</p><button class="button button--primary" data-action="continue-workout">继续救援</button><button class="button button--ghost" data-action="finish-partial">传送已有部位并结束</button>`);
+  const done = completedCount();
+  if (done > 0) {
+    openDialog(`<h2 id="dialog-title">现在结束吗？</h2><p>已经做完 ${done} 个 60 秒动作，可以先传送 ${done} 个部位。正在做的这个如果没做满，不会算进去。</p><button class="button button--primary" data-action="continue-workout">继续救援</button><button class="button button--ghost" data-action="finish-partial">传送已完成的部位并结束</button>`);
   } else {
     const remain = Math.max(1, state.seconds);
-    openDialog(`<h2 id="dialog-title">再坚持一下？</h2><p>再坚持 ${remain} 秒，就能送回第一个部位。当前进度会保留。</p><button class="button button--primary" data-action="continue-workout">继续${remain}秒</button><button class="button button--ghost" data-action="exit-without-part">暂时退出</button>`);
+    openDialog(`<h2 id="dialog-title">现在退出吗？</h2><p>这个动作还没做满 60 秒，现在退出不会传送部位。再做 ${remain} 秒，就能送回一个部位。</p><button class="button button--primary" data-action="continue-workout">继续${remain}秒</button><button class="button button--ghost" data-action="exit-without-part">不传送，先退出</button>`);
   }
 }
 
+function openShareCard() {
+  const card = state.rescueCard;
+  if (!card) { toast('先完成一个动作，再分享救援卡片'); return; }
+  $('#share-planet').textContent = card.planet;
+  $('#share-alien').className = `alien-sprite ${alienData[card.alien].className}`;
+  $('#share-title').textContent = card.full ? `${card.alien}已经回家` : `送回了 ${card.parts} 个部位`;
+  $('#share-line').textContent = card.full
+    ? `我用 ${card.minutes} 分钟，把${card.alien}完整送回了${card.planet}。`
+    : `我用 ${card.minutes} 分钟，帮${card.alien}送回了 ${card.parts} 个部位。`;
+  $('#share-date').textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+  $('#share-minutes').textContent = card.minutes;
+  $('#share-parts').textContent = card.parts;
+  showScreen('share-card');
+}
+
+function shareFileName(card) {
+  return `动动救援-${card.alien}.png`;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+async function drawShareCard() {
+  const card = state.rescueCard;
+  const canvas = document.createElement('canvas');
+  canvas.width = 750;
+  canvas.height = 1000;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 750, 1000);
+  ctx.fillStyle = '#ddeffc';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(750, 0);
+  ctx.lineTo(750, 430);
+  ctx.quadraticCurveTo(375, 560, 0, 430);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#111111';
+  ctx.font = '700 28px sans-serif';
+  ctx.fillText('动动 · 运动拯救地球', 56, 88);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(118, 210, 58, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111111';
+  ctx.font = '700 22px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(card.planet, 118, 218);
+  ctx.textAlign = 'left';
+  try {
+    const sheet = await loadImage('./assets/alien-characters-v2.png');
+    const frame = { '冲冲': 0, '弹弹': 1, '慢慢': 2 }[card.alien] ?? 1;
+    const frameWidth = sheet.width / 4;
+    ctx.drawImage(sheet, frame * frameWidth, 0, frameWidth, sheet.height, 275, 130, 200, 266);
+  } catch (_) {}
+  try {
+    const ship = await loadImage('./assets/rescue-spaceship.png');
+    ctx.drawImage(ship, 560, 150, 120, 84);
+  } catch (_) {}
+  ctx.fillStyle = '#111111';
+  ctx.font = '800 54px sans-serif';
+  ctx.fillText(card.alien, 56, 650);
+  ctx.font = '700 40px sans-serif';
+  const headline = card.full ? '已经完整回家' : `送回了 ${card.parts} 个部位`;
+  ctx.fillText(headline, 56, 720);
+  ctx.fillStyle = '#646d75';
+  ctx.font = '28px sans-serif';
+  ctx.fillText(`运动 ${card.minutes} 分钟`, 56, 820);
+  ctx.fillText(new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' }), 56, 870);
+  return canvas;
+}
+
+async function saveShareCard() {
+  const card = state.rescueCard;
+  if (!card) return;
+  const canvas = await drawShareCard();
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = shareFileName(card);
+  link.click();
+  toast('救援卡片已保存');
+}
+
+async function nativeShareCard() {
+  const card = state.rescueCard;
+  if (!card) return;
+  const text = card.full
+    ? `我在动动用 ${card.minutes} 分钟，把${card.alien}送回了${card.planet}。`
+    : `我在动动用 ${card.minutes} 分钟，帮${card.alien}送回了 ${card.parts} 个部位。`;
+  try {
+    const canvas = await drawShareCard();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    const file = new File([blob], shareFileName(card), { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: '动动救援卡片', text });
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title: '动动救援卡片', text });
+      return;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已复制救援卡片文字，可以贴到聊天里');
+  } catch (_) {
+    toast('这台电脑不能直接分享，可以先保存卡片图片');
+  }
+}
 function discomfortSheet() {
   state.paused = true;
   openSheet('先停一下，舒服最重要', `<p class="setup-intro">选择一个更适合现在身体状态的方式。</p><div class="choice-list"><button data-action="easier-action">降低难度 <span>动作幅度减半</span></button><button data-action="replace-workout-action">更换动作 <span>换成肩颈呼吸</span></button><button data-action="skip-workout-action">跳过并补充替代动作</button></div><p class="choice-note">如果出现疼痛或眩晕，请结束运动并咨询专业人士。</p>`);
@@ -1251,6 +1442,10 @@ function handleClick(event) {
     'skip-workout-action': () => { closeSheet(); state.paused = false; nextAction(); toast('已跳过，并在后面补充替代动作'); },
     'complete-home': () => { if (!state.planReady && state.mode === 'quick') showScreen('welcome'); else showScreen('home'); },
     'share': () => toast('救援卡片已准备好'),
+    'open-share-card': openShareCard,
+    'back-complete': () => showScreen('complete'),
+    'save-share': () => { saveShareCard(); },
+    'native-share': () => { nativeShareCard(); },
     'see-scenes': () => { closeDialog(); state.communityTab = 'square'; renderCommunityTab(); },
     'praise': () => reactToFriend('praise', target.dataset.userId || state.activeFriendId),
     'nudge': () => reactToFriend('nudge', target.dataset.userId || state.activeFriendId),

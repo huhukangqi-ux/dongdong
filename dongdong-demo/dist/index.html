@@ -138,7 +138,27 @@
         <div class="complete-copy"><p class="eyebrow" id="complete-kicker">完整计划已完成</p><h1 id="complete-title">救援成功！<br>弹弹已经完整回家。</h1><p id="complete-desc">你今天的 5 分钟，让地球和软糖星都亮了一点。</p></div>
         <div class="stat-grid"><div><b id="complete-minutes">5</b><span>运动分钟</span></div><div><b id="complete-actions">5</b><span>完成动作</span></div><div><b>3/3</b><span>本周进度</span></div><div><b id="complete-energy">+5</b><span>地球动能</span></div></div>
         <section class="feeling"><h2>现在感觉怎么样？</h2><div class="feeling-options" role="radiogroup"><button data-feeling="太轻松了">太轻松了</button><button data-feeling="刚刚好">刚刚好</button><button data-feeling="有点累">有点累</button><button data-feeling="身体不舒服">身体不舒服</button></div></section>
-        <div class="complete-actions"><button class="button button--primary" data-action="complete-home">返回今日计划</button><button class="button button--ghost" data-action="share">分享救援卡片</button><button class="text-button quick-plan-cta" id="quick-plan-cta" data-action="start-plan" hidden>设置正式运动计划 →</button></div>
+        <div class="complete-actions"><button class="button button--primary" data-action="complete-home">返回今日计划</button><button class="button button--ghost" data-action="open-share-card">分享救援卡片</button><button class="text-button quick-plan-cta" id="quick-plan-cta" data-action="start-plan" hidden>设置正式运动计划 →</button></div>
+      </section>
+
+      <section class="screen share-card" data-screen="share-card" aria-labelledby="share-title" hidden>
+        <header class="topbar"><button class="back-button" data-action="back-complete" aria-label="返回">‹</button><span>救援卡片</span><span></span></header>
+        <article class="rescue-share" id="rescue-share">
+          <p class="eyebrow">动动 · 运动拯救地球</p>
+          <div class="rescue-share-art">
+            <div class="planet" id="share-planet">软糖星</div>
+            <div class="alien-sprite alien--pink" id="share-alien" role="img" aria-label="救援的外星人"></div>
+            <img src="./assets/rescue-spaceship.png" alt="">
+          </div>
+          <h1 id="share-title">送回了 1 个部位</h1>
+          <p id="share-line">我用 1 分钟，帮弹弹送回了 1 个部位。</p>
+          <div class="share-stats"><div><b id="share-minutes">1</b><span>运动分钟</span></div><div><b id="share-parts">1</b><span>传送部位</span></div></div>
+          <small id="share-date"></small>
+        </article>
+        <div class="complete-actions">
+          <button class="button button--primary" data-action="native-share">分享给好友</button>
+          <button class="button button--ghost" data-action="save-share">保存卡片图片</button>
+        </div>
       </section>
 
       <section class="screen community" data-screen="community" aria-labelledby="community-title" hidden>
