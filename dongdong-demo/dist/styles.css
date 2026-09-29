@@ -199,3 +199,4 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sky);outline-of
 .ranking li em{font-style:normal;font-weight:700}
 .ranking li b{margin-left:auto;font-size:13px;color:#5f6871;font-weight:600}
 .challenge-list-item{align-items:center}
+.workout-controls button.muted{opacity:.4}

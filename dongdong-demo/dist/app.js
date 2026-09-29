@@ -8,19 +8,19 @@ const alienData = {
 };
 
 const baseActions = [
-  { name: "肩膀绕环", duration: "60秒", part: "肩颈", glyph: "↻", tip: "肩膀放松，手臂缓慢向后画圈。" },
-  { name: "颈部侧向拉伸", duration: "60秒", part: "肩颈", glyph: "↔", tip: "头部轻轻侧倾，不要耸肩或憋气。" },
-  { name: "站姿扩胸", duration: "60秒", part: "上背", glyph: "↗", tip: "双臂向后打开，胸口自然抬起。" },
-  { name: "手臂上举拉伸", duration: "60秒", part: "手臂", glyph: "↑", tip: "双手向上延伸，肋骨保持放松。" },
-  { name: "上背放松", duration: "60秒", part: "上背", glyph: "⌒", tip: "微微屈膝，手臂向前延伸，背部放松。" }
+  { code: "A001", name: "肩膀绕环", duration: "60秒", part: "肩颈", glyph: "↻", tip: "肩膀放松，手臂缓慢向后画圈。", actionType: "mobility", gif: "./assets/actions/A001.gif", steps: "肩膀远离耳朵，动作小而慢。" },
+  { code: "A002", name: "颈部侧向拉伸", duration: "60秒", part: "肩颈", glyph: "↔", tip: "头部轻轻侧倾，不要耸肩或憋气。", actionType: "stretch", gif: "./assets/actions/A002.gif", steps: "耳朵靠近肩膀，但肩膀不要抬起。" },
+  { code: "A003", name: "站姿扩胸", duration: "60秒", part: "上背", glyph: "↗", tip: "双臂向后打开，胸口自然抬起。", actionType: "stretch", gif: "./assets/actions/A003.gif", steps: "打开胸口，不要塌腰。" },
+  { code: "A004", name: "手臂上举拉伸", duration: "60秒", part: "手臂", glyph: "↑", tip: "双手向上延伸，肋骨保持放松。", actionType: "stretch", gif: "./assets/actions/A004.gif", steps: "肋骨保持放松，不要耸肩。" },
+  { code: "A005", name: "上背放松", duration: "60秒", part: "上背", glyph: "⌒", tip: "微微屈膝，手臂向前延伸，背部放松。", actionType: "stretch", gif: "./assets/actions/A005.gif", steps: "下巴微收，背部均匀打开。" }
 ];
 
 const quickActions = [
-  { id: "wake", name: "全身醒醒操", duration: "60秒", part: "全身", glyph: "✦", tip: "跟着节奏活动肩膀、手臂和双腿。" },
-  { id: "neck", name: "肩颈放松", duration: "60秒", part: "肩颈", glyph: "↻", tip: "肩膀缓慢向后绕环，再轻轻左右侧颈。" },
-  { id: "chest", name: "站姿扩胸", duration: "60秒", part: "上背", glyph: "↗", tip: "双臂向后打开，胸口自然抬起。" },
-  { id: "march", name: "原地踏步", duration: "60秒", part: "腿部", glyph: "⇅", tip: "抬膝踏步，手臂自然摆动，保持呼吸顺畅。" },
-  { id: "breath", name: "呼吸伸展", duration: "60秒", part: "全身", glyph: "≈", tip: "吸气双手上举，呼气缓慢放下，适合睡前。" }
+  { id: "wake", name: "全身醒醒操", duration: "60秒", part: "全身", glyph: "✦", tip: "跟着节奏活动肩膀、手臂和双腿。", actionType: "mobility", gif: "./assets/actions/A026.gif", steps: "身体保持直立，脚步轻。" },
+  { id: "neck", name: "肩颈放松", duration: "60秒", part: "肩颈", glyph: "↻", tip: "肩膀缓慢向后绕环，再轻轻左右侧颈。", actionType: "mobility", gif: "./assets/actions/A001.gif", steps: "肩膀远离耳朵，动作小而慢。" },
+  { id: "chest", name: "站姿扩胸", duration: "60秒", part: "上背", glyph: "↗", tip: "双臂向后打开，胸口自然抬起。", actionType: "stretch", gif: "./assets/actions/A003.gif", steps: "打开胸口，不要塌腰。" },
+  { id: "march", name: "原地踏步", duration: "60秒", part: "腿部", glyph: "⇅", tip: "抬膝踏步，手臂自然摆动，保持呼吸顺畅。", actionType: "low_impact_cardio", gif: "./assets/actions/A018.gif", steps: "脚步轻，保持能正常说话的强度。" },
+  { id: "breath", name: "呼吸伸展", duration: "60秒", part: "全身", glyph: "≈", tip: "吸气双手上举，呼气缓慢放下，适合睡前。", actionType: "relax", gif: "./assets/actions/A027.gif", steps: "呼吸安静自然，不刻意吸得过满。" }
 ];
 
 const STORAGE_KEY = "dongdong.demo.v1";
@@ -87,6 +87,7 @@ const initialState = (saved = {}) => ({
   }),
   quick: { ...defaultQuick(), ...saved.quick, fab: { ...defaultQuick().fab, ...saved.quick?.fab } },
   quickDraft: null,
+  soundOn: true,
   actions: baseActions.map((item) => ({ ...item, favorite: false })),
   workoutActions: [], workoutIndex: 0, seconds: 60, paused: false, following: false,
   communityTab: "friends", community: null, selectedChallengeId: null, activeFriendId: null,
@@ -142,7 +143,7 @@ function showScreen(name, options = {}) {
     screen.classList.toggle('screen--active', active);
     if (active) screen.scrollTop = 0;
   });
-  if (name !== 'workout') stopTimer();
+  if (name !== 'workout') { stopTimer(); stopCoach(); }
   $('#quick-fab').hidden = !['home', 'community', 'profile'].includes(name);
   if (name === 'home') renderHome();
   if (name === 'community') {
@@ -396,7 +397,7 @@ let actionCatalog = null;
 let planMatchKey = '';
 
 function actionGif(code) {
-  return /^A\d{3}$/.test(code || '') ? `./assets/actions/${code}.gif` : '';
+  return /^[AE]\d+$/.test(code || '') ? `./assets/actions/${code}.gif` : '';
 }
 
 function toPlanAction(row) {
@@ -408,6 +409,8 @@ function toPlanAction(row) {
     glyph: ACTION_GLYPH[row.action_type] || '·',
     tip: row.screen_cue || '动作慢一点，保持能正常说话。',
     steps: row.steps || '',
+    coreTip: row.core_tip || '',
+    actionType: row.action_type || 'stretch',
     source: row.source,
     gif: actionGif(row.code),
     favorite: false
@@ -620,7 +623,10 @@ function startWorkout(quick = false, alien) {
   state.workoutActions = quick ? [{ ...getQuickAction() }] : state.actions.map(item => ({...item}));
   beginWorkoutSession();
   state.workoutIndex = 0; state.seconds = 60; state.paused = false; state.following = true;
-  renderWorkout(); showScreen('workout'); startTimer();
+  coach.spoken = '';
+  showScreen('workout');
+  renderWorkout();
+  startTimer();
 }
 
 function openWorkoutAt(index) {
@@ -633,8 +639,9 @@ function openWorkoutAt(index) {
   state.paused = true;
   state.following = false;
   stopTimer();
-  renderWorkout();
+  coach.spoken = '';
   showScreen('workout');
+  renderWorkout();
 }
 
 function completedCount() {
@@ -652,6 +659,164 @@ function beginFollow() {
   state.paused = false;
   renderWorkout();
   startTimer();
+}
+
+const coach = { ctx: null, master: null, timer: null, playing: false, motif: '', spoken: '', pad: null };
+const MUSIC = {
+  stretch: { bpm: 76, steps: [0, 2, 4, 7, 4, 2, 0, -5] },
+  relax: { bpm: 64, steps: [0, -2, 0, 2, 0, -5] },
+  mobility: { bpm: 90, steps: [0, 4, 7, 4, 2, 0, 4, 7] },
+  activation: { bpm: 104, steps: [0, 2, 4, 7, 9, 7, 4, 0] },
+  low_impact_cardio: { bpm: 116, steps: [0, 4, 7, 12, 7, 4, 7, 4] }
+};
+const MUSIC_SHIFT = [0, 2, -2, 3];
+
+function ensureAudio() {
+  if (coach.ctx) return coach.ctx;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  const ctx = new AudioContext();
+  const master = ctx.createGain();
+  master.gain.value = 0.22;
+  master.connect(ctx.destination);
+  coach.ctx = ctx;
+  coach.master = master;
+  return ctx;
+}
+
+function duckMusic(level) {
+  if (!coach.master || !coach.ctx) return;
+  coach.master.gain.cancelScheduledValues(coach.ctx.currentTime);
+  coach.master.gain.linearRampToValueAtTime(level, coach.ctx.currentTime + 0.08);
+}
+
+function playTone(freq, duration, gainValue = 0.12) {
+  const ctx = coach.ctx;
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  const now = ctx.currentTime;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(gainValue, now + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.08, duration));
+  osc.connect(gain);
+  gain.connect(coach.master);
+  osc.start(now);
+  osc.stop(now + duration + 0.02);
+}
+
+function haltMusic() {
+  coach.playing = false;
+  if (coach.timer) window.clearTimeout(coach.timer);
+  coach.timer = null;
+  if (coach.pad) {
+    coach.pad.forEach((node) => { try { node.stop(); } catch (_) {} });
+    coach.pad = null;
+  }
+}
+
+function pauseCoach() {
+  haltMusic();
+  window.speechSynthesis?.cancel();
+}
+
+function stopCoach() {
+  pauseCoach();
+  coach.motif = '';
+  coach.spoken = '';
+}
+
+function clipSentence(text) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  const sentence = clean.split(/[。！？\n]/).map((item) => item.trim()).find(Boolean) || '';
+  return sentence.replace(/[。！？\s]+$/g, '').slice(0, 42);
+}
+
+function coachLine(action) {
+  const cue = clipSentence(action.tip);
+  const core = clipSentence(action.coreTip);
+  const steps = String(action.steps || '').split(/[。！？\n]/).map((item) => item.trim()).filter((item) => item.length >= 6 && item.length <= 42);
+  const extra = (core && core !== cue ? core : '') || steps.find((item) => item !== cue && /不要|保持|感受|缓慢|慢慢|放松|打开/.test(item)) || '';
+  return [action.name || '这个动作', cue, extra].filter(Boolean).join('。') + '。';
+}
+
+function speakLine(text) {
+  if (!window.speechSynthesis || !text) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-CN';
+  utter.rate = 0.95;
+  const voice = window.speechSynthesis.getVoices().find((item) => /zh/i.test(item.lang));
+  if (voice) utter.voice = voice;
+  utter.onstart = () => duckMusic(0.07);
+  utter.onend = () => { if (state.soundOn) duckMusic(0.22); };
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
+function motifId(action) {
+  const type = MUSIC[action.actionType] ? action.actionType : 'stretch';
+  const shift = [...String(action.code || action.name || '')].reduce((sum, char) => sum + char.charCodeAt(0), 0) % MUSIC_SHIFT.length;
+  return `${type}:${shift}`;
+}
+
+function startMusic(motif) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  haltMusic();
+  if (ctx.state === 'suspended') ctx.resume();
+  coach.playing = true;
+  coach.motif = motif;
+  const [type, shiftText] = motif.split(':');
+  const pattern = MUSIC[type] || MUSIC.stretch;
+  const shift = MUSIC_SHIFT[Number(shiftText)] || 0;
+  const root = 261.63 * Math.pow(2, shift / 12);
+  const step = 60 / pattern.bpm;
+  const pads = [0, 7].map((semi) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = root * Math.pow(2, semi / 12);
+    const gain = ctx.createGain();
+    gain.gain.value = 0.035;
+    osc.connect(gain);
+    gain.connect(coach.master);
+    osc.start();
+    return osc;
+  });
+  coach.pad = pads;
+  let index = 0;
+  const tick = () => {
+    if (!coach.playing) return;
+    const semi = pattern.steps[index % pattern.steps.length];
+    playTone(root * Math.pow(2, semi / 12), step * 0.92);
+    if ((type === 'activation' || type === 'low_impact_cardio') && index % 2 === 0) playTone(root / 2, 0.12, 0.05);
+    index += 1;
+    coach.timer = window.setTimeout(tick, step * 1000);
+  };
+  tick();
+}
+
+function syncCoach(action) {
+  if (state.screen !== 'workout' || !state.following || state.paused || !state.soundOn || !action) {
+    pauseCoach();
+    return;
+  }
+  const id = action.code || action.name;
+  const motif = motifId(action);
+  if (!coach.playing || coach.motif !== motif) startMusic(motif);
+  if (coach.spoken !== id) {
+    coach.spoken = id;
+    speakLine(coachLine(action));
+  }
+}
+
+function renderSoundButton() {
+  const button = $('[data-action="toggle-sound"]');
+  if (!button) return;
+  button.classList.toggle('muted', !state.soundOn);
+  button.textContent = state.soundOn ? '♫' : '♩';
+  button.setAttribute('aria-label', state.soundOn ? '关闭音乐和语音' : '打开音乐和语音');
 }
 
 function renderMotionDemo(action) {
@@ -701,6 +866,8 @@ function renderWorkout() {
     pauseButton.setAttribute('aria-label', state.paused ? '继续跟练' : '暂停');
   }
   renderAlienClasses();
+  renderSoundButton();
+  syncCoach(action);
 }
 
 function formatTime(totalSeconds) {
@@ -787,6 +954,7 @@ function finishWorkout(full) {
 
 function exitWorkout() {
   state.paused = true;
+  pauseCoach();
   const done = completedCount();
   if (done > 0) {
     openDialog(`<h2 id="dialog-title">现在结束吗？</h2><p>已经做完 ${done} 个 60 秒动作，可以先传送 ${done} 个部位。正在做的这个如果没做满，不会算进去。</p><button class="button button--primary" data-action="continue-workout">继续救援</button><button class="button button--ghost" data-action="finish-partial">传送已完成的部位并结束</button>`);
@@ -1451,13 +1619,19 @@ function handleClick(event) {
       if (!state.following) { beginFollow(); return; }
       state.paused = !state.paused; renderWorkout(); toast(state.paused ? '已暂停' : '继续救援');
     },
-    'toggle-sound': () => { target.classList.toggle('muted'); target.textContent = target.classList.contains('muted') ? '♩' : '♫'; toast(target.classList.contains('muted') ? '音乐和语音已关闭' : '音乐和语音已开启'); },
+    'toggle-sound': () => {
+      state.soundOn = !state.soundOn;
+      renderSoundButton();
+      if (state.soundOn) syncCoach(state.workoutActions[state.workoutIndex]);
+      else pauseCoach();
+      toast(state.soundOn ? '音乐和语音已开启' : '音乐和语音已关闭');
+    },
     'exit-workout': exitWorkout,
     'continue-workout': () => { closeDialog(); state.paused = false; renderWorkout(); },
     'finish-partial': () => finishWorkout(false),
     'exit-without-part': () => { closeDialog(); stopTimer(); showScreen(state.planReady ? 'home' : 'welcome'); toast('进度已保留，再坚持一点就能传送第一个部位'); },
     'easier-action': () => { closeSheet(); state.paused = false; $('#workout-tip').textContent = '动作幅度减半，保持呼吸自然。'; toast('已切换为低难度动作'); },
-    'replace-workout-action': () => { state.workoutActions[state.workoutIndex] = { name:'肩颈呼吸', duration:'60秒', part:'肩颈', glyph:'≈', tip:'跟随呼吸，缓慢放松肩膀。' }; closeSheet(); state.paused = false; renderWorkout(); toast('已更换为肩颈呼吸'); },
+    'replace-workout-action': () => { state.workoutActions[state.workoutIndex] = { code:'A027', name:'肩颈呼吸', duration:'60秒', part:'肩颈', glyph:'≈', tip:'跟随呼吸，缓慢放松肩膀。', actionType:'relax', gif:'./assets/actions/A027.gif', steps:'呼吸安静自然，不刻意吸得过满。' }; coach.spoken = ''; closeSheet(); state.paused = false; renderWorkout(); toast('已更换为肩颈呼吸'); },
     'skip-workout-action': () => { closeSheet(); state.paused = false; nextAction(); toast('已跳过，并在后面补充替代动作'); },
     'complete-home': () => { if (!state.planReady && state.mode === 'quick') showScreen('welcome'); else showScreen('home'); },
     'share': () => toast('救援卡片已准备好'),
@@ -1594,6 +1768,7 @@ function registerWebMCP() {
   tools.forEach(tool => { try { void Promise.resolve(context.registerTool(tool)).catch(() => {}); } catch (_) {} });
 }
 
+window.speechSynthesis?.getVoices();
 renderSetup(); renderHome(); renderMemoBoard(); initQuickFab(); renderQuickFab(); registerWebMCP();
 if (state.planReady) { finishIntroStory(); showScreen('home'); } else startIntroStory();
 syncWithServer();

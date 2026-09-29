@@ -98,7 +98,7 @@
     const select = [
       'code', 'name', 'primary_body_part', 'duration_sec', 'screen_cue', 'steps',
       'action_type', 'scenes', 'focus_areas', 'limit_knee', 'limit_back',
-      'limit_neck', 'limit_wrist', 'source'
+      'limit_neck', 'limit_wrist', 'source', 'core_tip'
     ].join(',');
     const url = `${SUPABASE_URL}/rest/v1/exercise_actions?select=${select}&status=neq.archived&order=code.asc`;
     let session = await ensureSession();
