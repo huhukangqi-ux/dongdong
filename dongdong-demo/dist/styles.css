@@ -187,7 +187,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--sky);outline-of
 @media(max-height:760px){.story-battery{top:68px}.story-ship--tired{top:54px}.story-alien-row--stranded,.story-alien-row--huddle{top:155px;transform:scale(.76)}.story-plot-bubble{top:62px}.story-human-row--conflict{top:182px;transform:scale(.78)}.story-alien-row--conflict{top:92px;transform:scale(.78)}.story-tension{top:164px}.story-symbol--earth-finale{top:12px}.story-alien-row--invite{top:74px;transform:scale(.72)}.story-human-row--invite{top:190px;transform:scale(.58)}}
 #guide-detail{white-space:pre-line;line-height:1.6}
 .action-row{cursor:pointer}
-.workout-controls .pause-button.is-start{font-size:16px;font-weight:700}
+.time-slider{display:grid;gap:8px;margin-top:4px}.time-slider strong{font-size:34px;letter-spacing:-1px;font-variant-numeric:tabular-nums}.time-slider input[type=range]{width:100%;height:32px;accent-color:var(--ink);cursor:pointer}.time-slider-scale{display:flex;justify-content:space-between;color:#707780;font-size:12px}
 .community-empty{padding:16px;border-radius:16px;background:var(--mist);color:#646d75;font-size:14px;line-height:1.5}
 .badges .community-empty,.collection .community-empty{grid-column:1/-1;height:auto}
 .friend-grid .community-empty,.memo-board .community-empty,.challenge-list .community-empty{grid-column:1/-1}

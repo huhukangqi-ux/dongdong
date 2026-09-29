@@ -35,6 +35,38 @@ function saveState() {
   try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ planReady, alien, config, quick })); } catch (_) {}
 }
 
+const FOCUS_OPTIONS = ["肩颈", "腰背", "核心", "腿部", "全身"];
+const GOAL_OPTIONS = ["养成运动习惯", "改善体态", "减脂塑形", "提升活力"];
+
+function selectedList(options, selected) {
+  const list = Array.isArray(selected) ? selected : selected ? [selected] : [];
+  const ordered = options.filter((item) => list.includes(item));
+  return ordered.length ? ordered : [options[0]];
+}
+
+function normalizeConfig(config) {
+  const focuses = selectedList(FOCUS_OPTIONS, config.focuses || config.focus);
+  const goals = selectedList(GOAL_OPTIONS, config.goals || config.goal);
+  const reminder = config.reminder && config.reminder !== "暂不设置" ? config.reminder : "19:00";
+  return {
+    ...config,
+    focuses,
+    focus: focuses[0],
+    goals,
+    goal: goals[0],
+    reminder,
+    reminderEnabled: config.reminderEnabled !== undefined ? Boolean(config.reminderEnabled) : config.reminder !== "暂不设置"
+  };
+}
+
+function focusLabel() {
+  return selectedList(FOCUS_OPTIONS, state.config.focuses).join("、");
+}
+
+function goalLabel() {
+  return selectedList(GOAL_OPTIONS, state.config.goals).join("、");
+}
+
 const initialState = (saved = {}) => ({
   screen: "welcome",
   previousScreen: "welcome",
@@ -47,12 +79,12 @@ const initialState = (saved = {}) => ({
   completed: false,
   completedParts: 0,
   selectedDate: 23,
-  config: {
+  config: normalizeConfig({
     scene: "办公室", duration: 5, focus: "肩颈", frequency: 3,
     days: ["一", "三", "五"], reminder: "19:00", age: "25～34岁",
     foundation: "几乎不运动", goal: "养成运动习惯", limits: ["无明显不适"],
     ...saved.config
-  },
+  }),
   quick: { ...defaultQuick(), ...saved.quick, fab: { ...defaultQuick().fab, ...saved.quick?.fab } },
   quickDraft: null,
   actions: baseActions.map((item) => ({ ...item, favorite: false })),
@@ -150,26 +182,26 @@ function startPlan() {
 
 const setupSteps = [
   {
-    title: '今天适合怎么动？', intro: '选择最接近当下的状态，计划随时可以再调整。',
+    title: '你喜欢怎么动？', intro: '按你平时的习惯来选，之后随时能改。',
     content: () => `
       ${choiceGroup('场景', 'scene', ['办公室','家里','户外','睡前'], state.config.scene)}
       ${choiceGroup('可接受时长', 'duration', [3,5,10,15], state.config.duration, (value) => `${value}分钟${value === 5 ? '<small>最容易坚持</small>' : ''}`, 'choice-grid--wide')}
-      ${choiceGroup('重点部位', 'focus', ['肩颈','腰背','核心','腿部','全身'], state.config.focus)}
-      <p class="choice-note">今天将优先安排${state.config.focus}放松与活动。</p>`
+      ${multiChoiceGroup('偏好部位', 'focuses', FOCUS_OPTIONS, state.config.focuses)}
+      <p class="choice-note">会优先安排${focusLabel()}的放松与活动。</p>`
   },
   {
     title: '一周动几次？', intro: '不用排得太满，留一点轻松坚持的空间。',
     content: () => `
       <section class="form-group"><h3>每周运动频次</h3><div class="frequency"><button data-frequency="-1" aria-label="减少频次">−</button><strong>每周 ${state.config.frequency} 次</strong><button data-frequency="1" aria-label="增加频次">＋</button></div><p class="choice-note">每周${state.config.frequency}次，每次${state.config.duration}分钟，一周只需要${state.config.frequency * state.config.duration}分钟。</p></section>
       <section class="form-group"><h3>运动日</h3><div class="chip-row">${['一','二','三','四','五','六','日'].map(day => `<button data-day="${day}" class="${state.config.days.includes(day) ? 'selected' : ''}">周${day}</button>`).join('')}</div></section>
-      ${choiceGroup('提醒时间', 'reminder', ['08:00','12:30','19:00','22:30','暂不设置'], state.config.reminder)}`
+      <section class="form-group"><h3>提醒时间</h3><div class="time-slider"><strong id="reminder-clock">${state.config.reminder}</strong><input id="reminder-range" type="range" min="0" max="287" step="1" value="${reminderIndex(state.config.reminder)}" aria-label="提醒时间"><div class="time-slider-scale"><span>00:00</span><span>12:00</span><span>23:55</span></div></div><label class="check-row"><input id="reminder-enabled" type="checkbox" ${state.config.reminderEnabled ? 'checked' : ''}>到点用电脑提醒我</label><p class="choice-note">打开后会调用这台电脑的通知。页面留在浏览器里时，到点会响一次。</p></section>`
   },
   {
     title: '再认识你一点', intro: '这些信息只用来调整动作难度，不展示给其他人。',
     content: () => `
       ${choiceGroup('年龄段', 'age', ['18岁以下','18～24岁','25～34岁','35～44岁','45～59岁','60岁以上'], state.config.age)}
       ${choiceGroup('运动基础', 'foundation', ['几乎不运动','偶尔运动','规律运动'], state.config.foundation)}
-      ${choiceGroup('主要目标', 'goal', ['养成运动习惯','改善体态','减脂塑形','提升活力'], state.config.goal)}`
+      ${multiChoiceGroup('主要目标', 'goals', GOAL_OPTIONS, state.config.goals)}`
   },
   {
     title: '有什么需要避开？', intro: '可以多选；运动过程中如感到疼痛，请立即停止。',
@@ -181,6 +213,23 @@ function choiceGroup(label, key, values, selected, formatter = (value) => value,
   return `<section class="form-group"><h3>${label}</h3><div class="choice-grid ${extraClass}">${values.map(value => `<button data-config="${key}" data-value="${value}" class="${String(value) === String(selected) ? 'selected' : ''}">${formatter(value)}</button>`).join('')}</div></section>`;
 }
 
+function multiChoiceGroup(label, key, values, selected) {
+  const chosen = new Set(selectedList(values, selected));
+  return `<section class="form-group"><h3>${label}</h3><div class="choice-grid">${values.map(value => `<button data-multi="${key}" data-value="${value}" class="${chosen.has(value) ? 'selected' : ''}">${value}</button>`).join('')}</div></section>`;
+}
+
+function reminderIndex(time) {
+  const match = String(time || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return 19 * 12;
+  const minutes = Number(match[1]) * 60 + Number(match[2]);
+  return Math.max(0, Math.min(287, Math.round(minutes / 5)));
+}
+
+function timeFromIndex(index) {
+  const total = Number(index) * 5;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function renderSetup() {
   const count = $('#setup-count');
   const progress = $('#setup-progress');
@@ -190,11 +239,12 @@ function renderSetup() {
     progress.style.width = '100%';
     $('#setup-content').innerHTML = `
       <h2>这就是你的轻运动计划</h2><p class="setup-intro">先从容易完成的节奏开始，之后随时能改。</p>
-      <div class="plan-summary"><h3>${state.config.duration}分钟${state.config.focus}唤醒</h3>
+      <div class="plan-summary"><h3>${state.config.duration}分钟${focusLabel()}唤醒</h3>
         <div class="summary-row"><span>频次</span><b>每周${state.config.frequency}次</b></div>
         <div class="summary-row"><span>主要场景</span><b>${state.config.scene}</b></div>
-        <div class="summary-row"><span>重点部位</span><b>${state.config.focus}</b></div>
-        <div class="summary-row"><span>目标</span><b>${state.config.goal}</b></div>
+        <div class="summary-row"><span>偏好部位</span><b>${focusLabel()}</b></div>
+        <div class="summary-row"><span>目标</span><b>${goalLabel()}</b></div>
+        <div class="summary-row"><span>提醒</span><b>${state.config.reminderEnabled ? state.config.reminder : '暂不设置'}</b></div>
         <div class="summary-row"><span>难度</span><b>轻松</b></div>
       </div><button class="text-button" data-action="edit-setup">← 返回修改</button>`;
     next.textContent = '选择外星人';
@@ -214,6 +264,7 @@ function setupBack() {
 
 function setupNext() {
   if (state.setupReview) { state.mode = 'formal'; renderAlienSelect(); showScreen('alien-select'); return; }
+  if (state.setupStep === 1) armComputerReminder({ announce: true });
   if (state.setupStep < 3) state.setupStep += 1;
   else state.setupReview = true;
   renderSetup();
@@ -243,22 +294,25 @@ function confirmAlien() {
 function onboardingPayload() {
   const c = state.config;
   return {
-    scene: c.scene, duration_min: c.duration, focus: c.focus,
-    frequency_per_week: c.days.length, weekdays: c.days, reminder: c.reminder,
-    age_band: c.age, fitness_level: c.foundation, primary_goal: c.goal,
+    scene: c.scene, duration_min: c.duration, focus: c.focuses,
+    frequency_per_week: c.days.length, weekdays: c.days, reminder: c.reminderEnabled ? c.reminder : '暂不设置',
+    age_band: c.age, fitness_level: c.foundation, primary_goal: c.goals,
     body_limits: c.limits, alien_code: state.alien
   };
 }
 
 function applyServerProfile(me) {
   if (!me?.onboarding_completed) return false;
-  state.config = {
+  const focuses = me.preferences.focus_labels?.length ? me.preferences.focus_labels : [me.preferences.focus_label];
+  const goals = me.health.primary_goal_labels?.length ? me.health.primary_goal_labels : [me.health.primary_goal_label];
+  state.config = normalizeConfig({
     ...state.config,
-    scene: me.preferences.scene_label, duration: me.preferences.duration_min, focus: me.preferences.focus_label,
-    frequency: me.plan.frequency_per_week, days: me.plan.weekday_labels, reminder: me.plan.reminder || '暂不设置',
-    age: me.health.age_band_label, foundation: me.health.fitness_level_label, goal: me.health.primary_goal_label,
+    scene: me.preferences.scene_label, duration: me.preferences.duration_min, focuses, focus: focuses[0],
+    frequency: me.plan.frequency_per_week, days: me.plan.weekday_labels,
+    reminder: me.plan.reminder || '19:00', reminderEnabled: Boolean(me.plan.reminder),
+    age: me.health.age_band_label, foundation: me.health.fitness_level_label, goals, goal: goals[0],
     limits: me.body_limits.map(item => item.label)
-  };
+  });
   if (alienData[me.alien?.name]) state.alien = me.alien.name;
   state.planReady = true;
   saveState();
@@ -338,11 +392,12 @@ function toPlanAction(row) {
 
 function matchPlanActions(rows, config) {
   const scene = SCENE_CODE[config.scene];
-  const focus = FOCUS_CODE[config.focus];
+  const focuses = selectedList(FOCUS_OPTIONS, config.focuses || config.focus).map((label) => FOCUS_CODE[label]).filter(Boolean);
+  const matchAnyFocus = focuses.includes('full');
   const limits = (config.limits || []).map((label) => LIMIT_CODE[label]).filter(Boolean);
   const fits = (row, ignoreFocus, allowCaution) => {
     if (scene && !(row.scenes || []).includes(scene)) return false;
-    if (!ignoreFocus && focus && focus !== 'full' && !(row.focus_areas || []).includes(focus)) return false;
+    if (!ignoreFocus && !matchAnyFocus && !focuses.some((focus) => (row.focus_areas || []).includes(focus))) return false;
     return limits.every((part) => {
       const suitability = row[`limit_${part}`];
       if (suitability === 'unsuitable') return false;
@@ -370,7 +425,7 @@ function matchPlanActions(rows, config) {
 
 function syncActionsToPlan() {
   if (!actionCatalog?.length) return;
-  const key = JSON.stringify([state.config.scene, state.config.focus, state.config.duration, state.config.limits]);
+  const key = JSON.stringify([state.config.scene, state.config.focuses, state.config.duration, state.config.limits]);
   if (key === planMatchKey) return;
   const matched = matchPlanActions(actionCatalog, state.config);
   if (!matched.length) return;
@@ -394,7 +449,7 @@ function renderHome() {
   renderAlienClasses();
   $('#home-alien-name').textContent = state.alien;
   $('#home-title').textContent = `下午好，今天动${state.config.duration}分钟吧`;
-  $('#home-plan-name').textContent = `${state.config.duration}分钟${state.config.focus}唤醒`;
+  $('#home-plan-name').textContent = `${state.config.duration}分钟${focusLabel()}唤醒`;
   $('#home-plan-meta').textContent = `${state.config.scene} · 轻松 · ${state.actions.length}个动作`;
   const button = $('#home-start');
   button.textContent = state.completed ? '再动一次' : state.completedParts ? `继续救援，还剩${Math.max(1, state.config.duration - state.completedParts)}分钟` : '开始救援';
@@ -446,7 +501,7 @@ function adjustPlanSheet() {
   openSheet('调整今日计划', `
     <section class="sheet-section"><h3>时长</h3><div class="chip-row">${[3,5,10,15].map(value => `<button data-adjust="duration" data-value="${value}" class="${state.config.duration === value ? 'selected' : ''}">${value}分钟</button>`).join('')}</div></section>
     <section class="sheet-section"><h3>场景</h3><div class="chip-row">${['办公室','家里','户外','睡前'].map(value => `<button data-adjust="scene" data-value="${value}" class="${state.config.scene === value ? 'selected' : ''}">${value}</button>`).join('')}</div></section>
-    <section class="sheet-section"><h3>部位</h3><div class="chip-row">${['肩颈','腰背','核心','腿部','全身'].map(value => `<button data-adjust="focus" data-value="${value}" class="${state.config.focus === value ? 'selected' : ''}">${value}</button>`).join('')}</div></section>
+    <section class="sheet-section"><h3>偏好部位</h3><div class="chip-row">${FOCUS_OPTIONS.map(value => `<button data-adjust="focus" data-value="${value}" class="${state.config.focuses.includes(value) ? 'selected' : ''}">${value}</button>`).join('')}</div></section>
     <p class="choice-note" id="adjust-note">修改后约 ${state.config.duration} 分钟，${state.actions.length} 个动作。</p>
     <label class="check-row"><input type="checkbox" id="sync-plan">同步到后续计划</label>
     <button class="button button--primary" data-action="save-adjust">仅修改今天</button>`);
@@ -1040,7 +1095,7 @@ function openProfileSetting(kind) {
     openSheet('运动偏好', profileRows([
       ['场景', me.preferences.scene_label],
       ['时长', `${me.preferences.duration_min} 分钟`],
-      ['重点部位', me.preferences.focus_label],
+      ['偏好部位', (me.preferences.focus_labels || [me.preferences.focus_label]).join('、')],
       ['难度', me.preferences.difficulty_label || '轻松']
     ]));
     return;
@@ -1050,7 +1105,7 @@ function openProfileSetting(kind) {
     openSheet('身体限制与健康信息', profileRows([
       ['年龄', me.health.age_band_label],
       ['运动基础', me.health.fitness_level_label],
-      ['目标', me.health.primary_goal_label],
+      ['目标', (me.health.primary_goal_labels || [me.health.primary_goal_label]).join('、')],
       ['身体限制', limits]
     ]) + '<p class="choice-note">动动提供日常轻运动建议，不能替代专业医疗意见。</p>');
     return;
@@ -1071,6 +1126,21 @@ function handleClick(event) {
   const target = event.target.closest('button,[data-action]');
   if (!target) return;
 
+  if (target.dataset.multi) {
+    const key = target.dataset.multi;
+    const options = key === 'focuses' ? FOCUS_OPTIONS : GOAL_OPTIONS;
+    const current = selectedList(options, state.config[key]);
+    const value = target.dataset.value;
+    if (current.includes(value) && current.length === 1) {
+      toast(key === 'focuses' ? '至少保留一个偏好部位' : '至少保留一个主要目标');
+      return;
+    }
+    state.config[key] = current.includes(value) ? current.filter((item) => item !== value) : options.filter((item) => item === value || current.includes(item));
+    if (key === 'focuses') state.config.focus = state.config.focuses[0];
+    if (key === 'goals') state.config.goal = state.config.goals[0];
+    renderSetup();
+    return;
+  }
   if (target.dataset.config) {
     const key = target.dataset.config;
     const value = key === 'duration' ? Number(target.dataset.value) : target.dataset.value;
@@ -1118,6 +1188,16 @@ function handleClick(event) {
   }
   if (target.dataset.replace !== undefined) { const index = Number(target.dataset.replace); state.actions[index] = { ...state.actions[index], name:'肩颈呼吸', glyph:'≈', tip:'跟随呼吸缓慢放松肩颈。' }; renderActionList(); toast('已换成肩颈呼吸'); return; }
   if (target.dataset.adjust) {
+    if (target.dataset.adjust === 'focus') {
+      const current = selectedList(FOCUS_OPTIONS, state.config.focuses);
+      const value = target.dataset.value;
+      if (current.includes(value) && current.length === 1) { toast('至少保留一个偏好部位'); return; }
+      state.config.focuses = current.includes(value) ? current.filter((item) => item !== value) : FOCUS_OPTIONS.filter((item) => item === value || current.includes(item));
+      state.config.focus = state.config.focuses[0];
+      planMatchKey = '';
+      $$(`[data-adjust="focus"]`, $('#sheet-content')).forEach((button) => button.classList.toggle('selected', state.config.focuses.includes(button.dataset.value)));
+      return;
+    }
     const value = target.dataset.adjust === 'duration' ? Number(target.dataset.value) : target.dataset.value;
     state.config[target.dataset.adjust] = value;
     $$(`[data-adjust="${target.dataset.adjust}"]`, $('#sheet-content')).forEach(button => button.classList.toggle('selected', button.dataset.value === String(value)));
@@ -1191,14 +1271,87 @@ $('#dialog-overlay').addEventListener('click', (event) => { if (event.target ===
 $('#join-consent')?.addEventListener?.('change', () => {});
 document.addEventListener('change', (event) => {
   if (event.target.id === 'join-consent') { state.join.consent = event.target.checked; $('#confirm-join').disabled = state.join.visibility === '广场公开' && !state.join.consent; }
+  if (event.target.id === 'reminder-enabled') {
+    state.config.reminderEnabled = event.target.checked;
+    if (event.target.checked) armComputerReminder({ announce: true });
+    else clearComputerReminder();
+  }
+  if (event.target.id === 'reminder-range') {
+    state.config.reminder = timeFromIndex(event.target.value);
+    if (state.config.reminderEnabled && 'Notification' in window && Notification.permission === 'granted') scheduleComputerReminder(state.config.reminder);
+  }
 });
 document.addEventListener('input', (event) => {
   if (event.target.id === 'new-message-text') $('#message-count').textContent = `${event.target.value.length}/60`;
+  if (event.target.id === 'reminder-range') {
+    state.config.reminder = timeFromIndex(event.target.value);
+    const clock = $('#reminder-clock');
+    if (clock) clock.textContent = state.config.reminder;
+  }
 });
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') { closeSheet(); closeDialog(); }
-  if (event.key.toLowerCase() === 'r' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) { try { window.localStorage.removeItem(STORAGE_KEY); } catch (_) {} window.dongdongApi?.clearSession(); state = initialState(); stopTimer(); renderQuickFab(); showScreen('welcome'); renderMemoBoard(); startIntroStory(); syncWithServer(); toast('Demo 已重置'); }
+  if (event.key.toLowerCase() === 'r' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) { try { window.localStorage.removeItem(STORAGE_KEY); window.localStorage.removeItem(REMINDER_KEY); } catch (_) {} clearComputerReminder(); window.dongdongApi?.clearSession(); state = initialState(); stopTimer(); renderQuickFab(); showScreen('welcome'); renderMemoBoard(); startIntroStory(); syncWithServer(); toast('Demo 已重置'); }
 });
+
+const REMINDER_KEY = "dongdong.reminder.v1";
+let reminderTimer = 0;
+
+function clearComputerReminder() {
+  if (reminderTimer) window.clearTimeout(reminderTimer);
+  reminderTimer = 0;
+}
+
+function nextReminderDelay(time) {
+  const match = String(time || "").match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+  return target.getTime() - now.getTime();
+}
+
+function scheduleComputerReminder(time) {
+  clearComputerReminder();
+  const delay = nextReminderDelay(time);
+  if (delay == null) return;
+  reminderTimer = window.setTimeout(() => {
+    if (!state.config.reminderEnabled || !("Notification" in window) || Notification.permission !== "granted") return;
+    try { new Notification("动动", { body: `到 ${time} 了，来动 ${state.config.duration} 分钟吧` }); } catch (_) {}
+    scheduleComputerReminder(state.config.reminder);
+  }, delay);
+}
+
+async function armComputerReminder({ announce } = {}) {
+  if (!state.config.reminderEnabled) { clearComputerReminder(); return; }
+  if (!("Notification" in window)) {
+    if (announce) toast("这台电脑的浏览器不支持通知");
+    return;
+  }
+  let permission = Notification.permission;
+  if (permission === "default") {
+    try { permission = await Notification.requestPermission(); } catch (_) { permission = "denied"; }
+  }
+  if (permission !== "granted") {
+    if (announce) toast("没有打开通知权限，时间已记下，但到点不会提醒");
+    return;
+  }
+  scheduleComputerReminder(state.config.reminder);
+  if (!announce) return;
+  const stamp = `${state.config.reminder}|${new Date().toDateString()}`;
+  try {
+    if (window.localStorage.getItem(REMINDER_KEY) === stamp) return;
+    window.localStorage.setItem(REMINDER_KEY, stamp);
+  } catch (_) {}
+  try { new Notification("动动提醒已打开", { body: `每天 ${state.config.reminder} 会提醒你` }); } catch (_) {}
+}
+
+function resumeComputerReminder() {
+  if (state.config.reminderEnabled && "Notification" in window && Notification.permission === "granted") {
+    scheduleComputerReminder(state.config.reminder);
+  }
+}
 
 function registerWebMCP() {
   const context = document.modelContext;
@@ -1215,12 +1368,12 @@ function registerWebMCP() {
       annotations:{readOnlyHint:false,untrustedContentHint:false}, execute({alien}){ if (!alienData[alien]) throw new Error('不支持此外星人'); startWorkout(true, alien); return {status:'started',mode:'quick',alien}; }
     },
     {
-      name:'configure_daily_plan', title:'调整今日计划', description:'设置今日轻运动的时长、场景和重点部位。',
+      name:'configure_daily_plan', title:'调整今日计划', description:'设置今日轻运动的时长、场景和偏好部位。',
       inputSchema:{type:'object',properties:{duration:{type:'number',enum:[3,5,10,15]},scene:{type:'string',enum:['办公室','家里','户外','睡前']},focus:{type:'string',enum:['肩颈','腰背','核心','腿部','全身']}},required:['duration','scene','focus'],additionalProperties:false},
       annotations:{readOnlyHint:false,untrustedContentHint:false}, execute(input){
         const valid = [3,5,10,15].includes(input.duration) && ['办公室','家里','户外','睡前'].includes(input.scene) && ['肩颈','腰背','核心','腿部','全身'].includes(input.focus);
         if (!valid) throw new Error('计划参数不在可选范围内');
-        state.config = {...state.config,...input}; renderHome(); return {status:'updated',plan:input};
+        state.config = {...state.config,...input, focuses:[input.focus]}; renderHome(); return {status:'updated',plan:input};
       }
     }
   ];
@@ -1231,3 +1384,4 @@ renderSetup(); renderHome(); renderMemoBoard(); initQuickFab(); renderQuickFab()
 if (state.planReady) { finishIntroStory(); showScreen('home'); } else startIntroStory();
 syncWithServer();
 ensureActionCatalog();
+resumeComputerReminder();
